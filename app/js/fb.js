@@ -23,14 +23,14 @@
                 location = "categories.html";
             }
             else {
-                document.getElementById("signInBtn").addEventListener("click",function(){
+                document.getElementById("signInBtn").addEventListener("click", function () {
                     me.signInWithRedirect();
                 });
             }
         });
     };
 
-    fb.signInWithRedirect = function(){
+    fb.signInWithRedirect = function () {
         var provider = new firebase.auth.GoogleAuthProvider();
         firebase.auth().signInWithRedirect(provider);
     };
@@ -42,7 +42,10 @@
 
 (function () {
 
-    var cats = cats || {};
+    var cats = cats || {
+            selectedCatId: null
+        };
+
 
     cats.init = function () {
         var user;
@@ -59,20 +62,40 @@
         firebase.auth().onAuthStateChanged(function (user) {
             if (user) {
                 me.getFoodCats();
+                me.setListeners();
             }
             else {
-                document.getElementById("signInBtn").addEventListener("click",function(){
+                document.getElementById("signInBtn").addEventListener("click", function () {
                     me.signInWithRedirect();
                 });
             }
         });
     };
 
-    cats.getFoodCats = function(){
-        var cats = firebase.database().ref("foodCategories/");
-        cats.on("value", function(snapshot){
-            console.log(snapshot.val());
-        })
+    cats.getFoodCats = function () {
+        var me = this,
+            cats = firebase.database().ref("foodCategories/");
+
+        // render list
+        cats.on("value", function (snapshot) {
+            var foodCats = snapshot.val(),
+                catsEl = document.getElementById('cats'),
+                i = 0;
+            $.each(foodCats, function () {
+                $("#cats").append("<li class='cat' data-id='" + this.id + "'>" + this.label + "</li>");
+            });
+
+            //click
+            $("li").on("click", function () {
+                console.log($(this).data("id"));
+                me.selectedCatId = $(this).data("id");
+                me.loadVotingPage();
+            });
+        });
+    };
+
+    cats.loadVotingPage = function () {
+        alert(this.selectedCatId);
     };
 
     window.cats = cats;
