@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Select Your Region 2</title>
+</head>
+<body onload="getUser()">
+
+</body>
+
+<script src="https://www.gstatic.com/firebasejs/3.2.0/firebase.js"></script>
+<script>
+    // Initialize Firebase
+    var config = {
+        apiKey: "AIzaSyCsGWvM0qTGzqzj24hkn2xFZqqVKrUqVMI",
+        authDomain: "feast-beast-1001.firebaseapp.com",
+        databaseURL: "https://feast-beast-1001.firebaseio.com",
+        storageBucket: "feast-beast-1001.appspot.com",
+    };
+    firebase.initializeApp(config);
+
+    function getUser(){
+        firebase.auth().onAuthStateChanged(function(user) {
+            if (user) {
+                var userId = firebase.auth().currentUser.uid;
+                setUpRegionSelector();
+            }
+            else {
+                window.location = "index.html";
+            }
+        });
+    }
+
+    function setUpSelector(){
+
+    }
+
+    function textUpdate(){
+
+    }
+
+    
+</script>
+</html>
