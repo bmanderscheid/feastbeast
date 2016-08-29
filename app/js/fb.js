@@ -20,10 +20,10 @@
         //user in?
         firebase.auth().onAuthStateChanged(function (user) {
             if (user) {
-                location = "categories.html";
+                location = "vote.html";
             }
             else {
-                document.getElementById("signInBtn").addEventListener("click", function () {
+                $("#signInBtn").on("click", function () {
                     me.signInWithRedirect();
                 });
             }
@@ -43,7 +43,10 @@
 (function () {
 
     var cats = cats || {
-            selectedCatId: null
+            allCategories:null,
+            userVotes:null,
+            selectedCatId: null,
+            selectedCatName:null
         };
 
 
@@ -61,14 +64,53 @@
         //user in?
         firebase.auth().onAuthStateChanged(function (user) {
             if (user) {
-                me.getFoodCats();
+                me.setMap();
                 me.setListeners();
+                me.getUserVotes();
             }
             else {
-                document.getElementById("signInBtn").addEventListener("click", function () {
-                    me.signInWithRedirect();
-                });
+                location = "index.html";
             }
+        });
+    };
+
+    cats.setMap = function () {
+        var me = this;
+        var defaultBounds = new google.maps.LatLngBounds(
+            new google.maps.LatLng(42.952763, -88.126144),
+            new google.maps.LatLng(43.161977, -87.877579));
+
+        var input = document.getElementById('searchTextField');
+        var options = {
+            bounds: defaultBounds,
+            types: ['establishment']
+        };
+
+        autocomplete = new google.maps.places.Autocomplete(input, options);
+
+        autocomplete.addListener('place_changed', function () {
+            var place = autocomplete.getPlace();
+            console.log(place);
+            input.value = place.name;
+            //TODO VALIDATE SELECTION
+            me.makeVote(place);
+        });
+
+    };
+
+    cats.setListeners = function () {
+        $("#signOutBtn").on("click", function () {
+            firebase.auth().signOut();
+            location = "index.html";
+        });
+    };
+
+    cats.getUserVotes = function(){
+        var me = this,
+            votes = firebase.database().ref("users/" + firebase.auth().currentUser.uid + "/votes/");
+        votes.once("value", function (snapshot) {
+            me.userVotes = snapshot.val();
+            me.getFoodCats();
         });
     };
 
@@ -77,26 +119,65 @@
             cats = firebase.database().ref("foodCategories/");
 
         // render list
-        cats.on("value", function (snapshot) {
+        cats.once("value", function (snapshot) {
             var foodCats = snapshot.val(),
                 catsEl = document.getElementById('cats'),
                 i = 0;
-            $.each(foodCats, function () {
-                $("#cats").append("<li class='cat' data-id='" + this.id + "'>" + this.label + "</li>");
+            $.each(foodCats, function (index) {
+                $("#cats").append("<li class='cat' data-id='" + this.id + "'  data-name='" + this.label + "'>" + this.label);
+                if(me.userVotes && me.userVotes[index]){
+                    $("#cats").append("<span style='color:green'>- " + me.userVotes[index].placeName + "</span>");
+                }
+                $("#cats").append("</li>");
             });
 
             //click
             $("li").on("click", function () {
-                console.log($(this).data("id"));
                 me.selectedCatId = $(this).data("id");
+                me.selectedCatName = $(this).data("name");
                 me.loadVotingPage();
             });
         });
     };
 
     cats.loadVotingPage = function () {
-        alert(this.selectedCatId);
+        $("#cats").empty();
+        $("#searchTextField").attr("placeholder","vote for " + this.selectedCatName);
+        $("#searchTextField").show();
     };
+
+    cats.checkVote = function (place) {
+        firebase.database().ref("votes/")
+    };
+
+    cats.makeVote = function (place) {
+
+        var voteKey = firebase.database().ref().push().key;
+        var voteData = {};
+        voteData["votes/" + this.selectedCatId + "/" + firebase.auth().currentUser.uid + "/"] = {
+            uid: firebase.auth().currentUser.uid,
+            placeId: place.place_id,
+            foodCat: this.selectedCatId,
+            date: new Date().getDate()
+        };
+        voteData["users/" + firebase.auth().currentUser.uid + "/votes/" + this.selectedCatId + "/"] = {
+            placeId: place.place_id,
+            placeName: place.name,
+            date: new Date().getDate()
+        };
+        firebase.database().ref().update(voteData, this.onVoteComplete);
+    };
+
+    cats.onVoteComplete = function (error) {
+        if (error) {
+            alert("something went wrong")
+        }
+        else {
+            console.log('Synchronization succeeded');
+            location = "vote.html";
+        }
+    };
+
 
     window.cats = cats;
 
