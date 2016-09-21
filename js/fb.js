@@ -4,7 +4,13 @@
 
 (function () {
 
-    var fb = fb || {};
+    var fb = fb || {
+            allCategories: null,
+            userVotes: null,
+            selectedCatId: null,
+            selectedCatName: null
+        };
+
 
     fb.init = function () {
         var user;
@@ -20,7 +26,7 @@
         //user in?
         firebase.auth().onAuthStateChanged(function (user) {
             if (user) {
-                location = "vote.html";
+                me.showCategories();
             }
             else {
                 $("#signInBtn").on("click", function () {
@@ -35,6 +41,46 @@
         firebase.auth().signInWithRedirect(provider);
     };
 
+    fb.showCategories = function(){
+        this.getUserVotes();
+        $("#categories").show();
+    };
+
+    fb.getUserVotes = function () {
+        var me = this,
+            votes = firebase.database().ref("users/" + firebase.auth().currentUser.uid + "/votes/");
+        votes.once("value", function (snapshot) {
+            me.userVotes = snapshot.val();
+            me.getFoodCats();
+        });
+    };
+
+    fb.getFoodCats = function () {
+        var me = this,
+            cats = firebase.database().ref("foodCategories/");
+
+        // render list
+        cats.once("value", function (snapshot) {
+            var foodCats = snapshot.val(),
+                catsEl = document.getElementById('categoryTiles'),
+                i = 0;
+            $.each(foodCats, function (index) {
+                $("#categoryTiles").append("<div class='cat' data-id='" + this.id + "'  data-name='" + this.label + "'>" + this.label);
+                if (me.userVotes && me.userVotes[index]) {
+                    $("#cats").append("<span style='color:green'>- " + me.userVotes[index].placeName + "</span>");
+                }
+                $("#cats").append("</div>");
+            });
+
+            //click
+            $("li").on("click", function () {
+                me.selectedCatId = $(this).data("id");
+                me.selectedCatName = $(this).data("name");
+                me.loadVotingPage();
+            });
+        });
+    };
+
 
     window.fb = fb;
 
@@ -43,35 +89,18 @@
 (function () {
 
     var cats = cats || {
-            allCategories:null,
-            userVotes:null,
+            allCategories: null,
+            userVotes: null,
             selectedCatId: null,
-            selectedCatName:null
+            selectedCatName: null
         };
 
 
     cats.init = function () {
-        var user;
-        var me = this;
-        var config = {
-            apiKey: "AIzaSyCsGWvM0qTGzqzj24hkn2xFZqqVKrUqVMI",
-            authDomain: "feast-beast-1001.firebaseapp.com",
-            databaseURL: "https://feast-beast-1001.firebaseio.com",
-            storageBucket: "feast-beast-1001.appspot.com"
-        };
-        firebase.initializeApp(config);
-
-        //user in?
-        firebase.auth().onAuthStateChanged(function (user) {
-            if (user) {
-                me.setMap();
-                me.setListeners();
-                me.getUserVotes();
-            }
-            else {
-                location = "index.html";
-            }
-        });
+        me.setMap();
+        me.setListeners();
+        me.getUserVotes();
+        $("#categories").show();
     };
 
     cats.setMap = function () {
@@ -105,7 +134,7 @@
         });
     };
 
-    cats.getUserVotes = function(){
+    cats.getUserVotes = function () {
         var me = this,
             votes = firebase.database().ref("users/" + firebase.auth().currentUser.uid + "/votes/");
         votes.once("value", function (snapshot) {
@@ -125,7 +154,7 @@
                 i = 0;
             $.each(foodCats, function (index) {
                 $("#cats").append("<li class='cat' data-id='" + this.id + "'  data-name='" + this.label + "'>" + this.label);
-                if(me.userVotes && me.userVotes[index]){
+                if (me.userVotes && me.userVotes[index]) {
                     $("#cats").append("<span style='color:green'>- " + me.userVotes[index].placeName + "</span>");
                 }
                 $("#cats").append("</li>");
@@ -142,7 +171,7 @@
 
     cats.loadVotingPage = function () {
         $("#cats").empty();
-        $("#searchTextField").attr("placeholder","vote for " + this.selectedCatName);
+        $("#searchTextField").attr("placeholder", "vote for " + this.selectedCatName);
         $("#searchTextField").show();
     };
 
