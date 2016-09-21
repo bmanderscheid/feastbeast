@@ -95,7 +95,7 @@
     };
 
     cats.loadVotingPage = function () {
-        alert(this.selectedCatId);
+        $("#cats").empty();
     };
 
     window.cats = cats;
